@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Bakery Focus</title>
+    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #FEF9E7; /* 奶油黄 */
+            --wood-dark: #A0522D; /* 木棕色 */
+            --wood-light: #CD853F; /* 浅木色 */
+            --window-glass: #FFFDF5; /* 窗口背景 */
+            --primary-pink: #F4C2C2;
+            --deep-pink: #E91E63; /* 菜单标题粉 */
+            --accent-yellow: #FDFD96;
+            --text-color: #5D4037; /* 咖啡色 */
+            --oven-dark: #3E2723;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'DotGothic16', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            user-select: none;
+            overflow: hidden; 
+        }
+
+        /* ------------------------------------------------ */
+        /* 1. 甜品店展示柜外形 */
+        /* ------------------------------------------------ */
+        .display-case {
+            width: 95%;
+            max-width: 480px; 
+            background: var(--wood-dark);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 15px 30px rgba(93, 64, 55, 0.4), 
+                        inset 0 -10px 10px rgba(0,0,0,0.3); 
+            position: relative;
+        }
+
+        /* 玻璃展示窗口 */
+        .display-window {
+            background: var(--window-glass);
+            border: 8px solid var(--wood-light);
+            border-radius: 6px;
+            height: 550px; 
+            overflow-y: auto; 
+            overflow-x: hidden;
+            position: relative;
+            padding: 15px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.1); 
+
+            /* 像素网格背景纹理 */
+            background-image: 
+                linear-gradient(#FCE4EC 1px, transparent 1px),
+                linear-gradient(90deg, #FCE4EC 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* 滚动条美化 */
+        .display-window::-webkit-scrollbar { width: 4px; length: 5px;}
+        .display-window::-webkit-scrollbar-thumb { background: var(--wood-dark); border-radius: 3px; }
+
+        /* ------------------------------------------------ */
+        /* 2. 界面和组件样式 */
+        /* ------------------------------------------------ */
+
+        h1 {
+            font-size: 20px;
+            text-align: center;
+            margin: 10px 0 20px;
+            color: var(--deep-pink);
+            text-shadow: 2px 2px 0px #FFF;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            background: #FFF;
+            padding: 5px 10px;
+            border: 2px solid var(--text-color);
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .cake-card {
+            background: #FFF;
+            border: 2px solid var(--text-color);
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.1s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cake-card:active { transform: scale(0.95); }
+        
+        .cake-card img {
+            width: 48px;
+            height: 48px;
+            image-rendering: pixelated; 
+            margin-bottom: 5px;
+        }
+
+        .cake-name { 
+            font-size: 14px; 
+            font-weight: bold; 
+            margin: 5px 0; 
+            font-family: 'DotGothic16', sans-serif; 
+        }
+        
+        .cake-time { 
+            font-size: 12px; 
+            color: #FFF; 
+            background: #E5989B; 
+            display: inline-block; 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+        }
+
+        #oven-screen { display: none; height: 100%; text-align: center; }
+
+        /* 烤箱/制作区域 */
+        .oven-body {
+            background: #F5EFE6;
+            border-radius: 10px;
+            padding: 10px;
+            margin-top: 20px;
+            position: relative;
+            border: 6px solid #3E2723;
+        }
+
+        .oven-window {
+            background: #F4C2C2;
+            height: 150px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            border: 4px solid #5D4037;
+        }
+
+        /* 烤箱加热动画及蒸汽 */
+        .heating .oven-window { animation: ovenGlow 2s infinite alternate; }
+        @keyframes ovenGlow {
+            from { box-shadow: inset 0 0 10px #FFA07A; background: #3E2723; }
+            to { box-shadow: inset 0 0 40px #FFCCBC; background: #5D4037; }
+        }
+        .steam-container { position: absolute; top: -20px; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        .steam { position: absolute; background: rgba(255, 255, 255, 0.6); width: 8px; height: 8px; bottom: 10px; left: 50%; opacity: 0; }
+        .steam.animate { animation: rise 2s infinite; }
+        @keyframes rise {
+            0% { transform: translateY(0) scale(1); opacity: 0.8; }
+            100% { transform: translateY(-60px) scale(2); opacity: 0; }
+        }
+
+        .oven-timer {
+            font-family: 'Press Start 2P', cursive;
+            color: var(--deep-pink);
+            font-size: 28px;
+            margin-top: 15px;
+            background: #FFF;
+            padding: 12px 25px;
+            border: 4px solid var(--primary-pink);
+            border-radius: 15px;
+            display: inline-block;
+        }
+
+        .btn-group { margin-top: 30px; display: flex; justify-content: center; gap: 15px; }
+        
+        .pixel-btn {
+            font-family: 'DotGothic16', sans-serif;
+            background: #FFF;
+            border: 2px solid var(--text-color);
+            padding: 8px 16px;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 4px 4px 0px var(--text-color);
+            transition: 0.1s;
+        }
+
+        .pixel-btn:active {
+            box-shadow: 0px 0px 0px;
+            transform: translate(4px, 4px);
+        }
+
+        /* ------------------------------------------------ */
+        /* 3. 弹窗 (Modal) 样式 */
+        /* ------------------------------------------------ */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; 
+            left: 0; 
+            width: 100vw; 
+            height: 100vh;
+            background: rgba(0,0,0,0.6);
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+            pointer-events: auto; 
+        }
+
+        /* 欢迎弹窗的特殊样式和动画 */
+        .welcome-box {
+            box-shadow: 8px 8px 0px var(--accent-yellow); 
+            opacity: 0; 
+            transform: scale(0.5);
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; 
+        }
+
+        /* 关键 CSS 修复：初始时让它显示出来，但避免使用 !important，让 JS 控制 display */
+        #welcome-modal {
+            display: flex; 
+        }
+        
+        @keyframes popIn {
+            from { transform: scale(0.5) translateY(-50px); opacity: 0; }
+            to { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+        .modal-content {
+            background: #FFF;
+            padding: 20px;
+            border: 4px solid var(--text-color);
+            text-align: center;
+            box-shadow: 8px 8px 0px var(--primary-pink);
+            width: 80%;
+            max-width: 300px;
+        }
+        
+        .hidden { display: none !important; }
+
+    </style>
+</head>
+<body>
+
+    <div class="display-case">
+        <div class="display-window">
+            
+            <div class="status-bar">
+                <span>🍰 合計: <span id="total-cakes">0</span> 個</span>
+                <span>⏰ 時間: <span id="total-time">0</span> min</span>
+            </div>
+
+            <div id="menu-screen">
+                <h1>♡ Maid Cafe Focus ♡<br><span style="font-size:12px; color:#888;">Select Your Treat</span></h1>
+                <div class="menu-grid" id="menu-grid">
+                    </div>
+            </div>
+
+            <div id="oven-screen">
+                <h2 id="task-title" style="margin-bottom:5px;">Strawberry Cake</h2>
+                <p id="kaomoji-display" style="font-size:12px; color:#E91E63; margin-top:0;">( ˘ω˘ ) 準備中...</p>
+
+                <div class="oven-body heating">
+                    <div class="steam-container" id="steam-container">
+                        </div>
+                    <div class="oven-window">
+                        <img id="baking-img" src="" style="width:100px; height:100px; image-rendering:pixelated;">
+                    </div>
+                </div>
+
+                <div class="oven-timer" id="timer-display">25:00</div>
+
+                <div class="btn-group">
+                    <button class="pixel-btn" onclick="toggleTimer()">停止</button>
+                    <button class="pixel-btn" style="background:#FDFD96;" onclick="resetGame()">リセット</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="welcome-modal" class="modal">
+        <div class="modal-content welcome-box">
+            <h2 style="color:#E91E63;">お帰り！</h2>
+            <div class="complete-img" style="animation: none;">🎀</div>
+            <p style="line-height: 1.6; font-size: 14px;">
+                ご主人様！<br>
+                今日は、何になさいますか？<br>
+                <span style="color: #5D4037; font-size: 10px;">(U˘ ᵕ ˘U)</span>
+            </p>
+            <br>
+            <button class="pixel-btn" onclick="closeWelcomeModal()">注文する</button>
+        </div>
+    </div>
+
+    <div id="completion-modal" class="modal">
+        <div class="modal-content">
+            <h2 style="color:#E91E63;">Baked!</h2>
+            <img id="done-img" src="" style="width:80px; height:80px; margin:10px 0; image-rendering:pixelated;">
+            <p>
+                <span id="done-name"></span> is Done!<br>
+                <br>
+                Looks delicious! (๑´ڡ`๑)
+            </p>
+            <button class="pixel-btn" onclick="closeModal()">OK!</button>
+        </div>
+    </div>
+
+
+    <script>
+        // ================= 全局变量和数据配置 =================
+        let welcomeTimeout = null; 
+
+        const desserts = [
+            { name: "Strawberry Cake", time: 5, imgUrl: "./images/cake_strawberry_sliced.png" }, 
+            { name: "Fruit Waffles", time: 10, imgUrl: "./images/BerryWaffles.png" },
+            { name: "Cinnamon Roll", time: 15, imgUrl: "./images/Cinnamonroll.png" },
+            { name: "Lemon Cake", time: 20, imgUrl: "./images/LemonCheesecake.png" },
+            { name: "Rainbow Pancake", time: 25, imgUrl: "./images/Pancakes_Rainbow.png" },
+            { name: "Croissant", time: 30, imgUrl: "./images/Croissant.png" },
+            { name: "Tiramisu", time: 45, imgUrl: "./images/Tirimasu.png" },
+            { name: "Cookie & Cream", time: 50, imgUrl: "./images/CookieNCreamPot.png" },
+            { name: "Cheese Cake", time: 60, imgUrl: "./images/Cheesecake.png" },
+            { name: "Angelic Rainbow", time: 90, imgUrl: "./images/cake_rainbow_sliced.png" }
+        ];
+
+        const kaomojis = [
+            "( •̀Tc•́ ) まぜまぜ...",
+            "( ˘ω˘ ) ふくらみ中...",
+            "(｡•̀ᴗ-)✧ おいしくな〜れ",
+            "(ง •_•)ง じっくり...",
+            "(*Pxq*) イイ匂い..."
+        ];
+
+        let countdown;
+        let totalSeconds;
+        let isPaused = false;
+        let currentCake = null;
+        let achievements = JSON.parse(localStorage.getItem('bakeryAchievements')) || { count: 0, time: 0 };
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const audioCtx = new AudioContext();
+
+        // ================= 函数定义 =================
+
+        function playBeep() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            const startTime = audioCtx.currentTime;
+            const duration = 0.2
+            
+            oscillator.type = 'triangle'; 
+
+            const startFreq = 1200; // 更高的起始频率
+            const endFreq = 400;    // 结束频率
+
+            oscillator.frequency.setValueAtTime(startFreq, startTime); 
+            oscillator.frequency.exponentialRampToValueAtTime(endFreq, startTime + duration);
+            
+            gainNode.gain.setValueAtTime(0.15, startTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            oscillator.start(startTime);
+            oscillator.stop(startTime + duration);
+        }
+
+        function init() {
+            updateAchievementUI();
+            
+            const menuGrid = document.getElementById('menu-grid');
+            
+            // 确保菜单只生成一次
+            if (menuGrid.children.length === 0) {
+                desserts.forEach(cake => {
+                    const btn = document.createElement('div');
+                    btn.className = 'cake-card';
+                    btn.innerHTML = `
+                        <img src="${cake.imgUrl}" alt="${cake.name}">
+                        <div class="cake-name">${cake.name}</div>
+                        <div class="cake-time">${cake.time} min</div>
+                    `;
+                    btn.onclick = () => {
+                        playBeep();
+                        startBaking(cake);
+                    };
+                    menuGrid.appendChild(btn);
+                });
+            }
+
+            createSteam();
+        }
+        
+        function createSteam() {
+            const container = document.getElementById('steam-container');
+            if(container.children.length > 0) return; 
+
+            for(let i=0; i<5; i++) {
+                let steam = document.createElement('div');
+                steam.className = 'steam hidden'; 
+                steam.style.left = (20 + Math.random() * 60) + '%';
+                steam.style.animationDelay = (Math.random() * 2) + 's';
+                container.appendChild(steam);
+            }
+        }
+
+        function startBaking(cake) {
+            currentCake = cake;
+            document.getElementById('menu-screen').classList.add('hidden');
+            document.getElementById('oven-screen').style.display = 'block';
+            document.getElementById('task-title').innerText = cake.name;
+            document.getElementById('baking-img').src = cake.imgUrl;
+            totalSeconds = cake.time * 60;
+            isPaused = false;
+            updateDisplay();
+            updateKaomoji();
+            document.querySelectorAll('.steam').forEach(s => {
+                s.classList.remove('hidden');
+                s.classList.add('animate');
+            });
+            startInterval();
+        }
+
+        function startInterval() {
+            clearInterval(countdown);
+            countdown = setInterval(() => {
+                if (!isPaused) {
+                    totalSeconds--;
+                    updateDisplay();
+                    if (totalSeconds % 60 === 0) updateKaomoji();
+                    if (totalSeconds <= 0) {
+                        finishBaking();
+                    }
+                }
+            }, 1000);
+        }
+
+        function updateDisplay() {
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            document.getElementById('timer-display').innerText = 
+                `${minutes < 10 ? '0' : ''}${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+        }
+
+        function updateKaomoji() {
+            const random = Math.floor(Math.random() * kaomojis.length);
+            document.getElementById('kaomoji-display').innerText = kaomojis[random];
+        }
+
+        function toggleTimer() {
+            playBeep();
+            isPaused = !isPaused;
+            const btn = document.querySelector('#oven-screen .pixel-btn');
+            const ovenWindow = document.querySelector('.oven-body');
+            
+            if (isPaused) {
+                btn.innerText = "再開 ▶";
+                ovenWindow.classList.remove('heating'); 
+                document.querySelectorAll('.steam').forEach(s => s.classList.remove('animate')); 
+                document.getElementById('kaomoji-display').innerText = "( ˙-˙ ) 休憩...";
+            } else {
+                btn.innerText = "一時停止";
+                ovenWindow.classList.add('heating');
+                document.querySelectorAll('.steam').forEach(s => s.classList.add('animate'));
+                updateKaomoji();
+            }
+        }
+
+        function resetGame() {
+            playBeep();
+            clearInterval(countdown);
+            document.getElementById('oven-screen').style.display = 'none';
+            document.getElementById('menu-screen').classList.remove('hidden');
+            document.querySelector('#oven-screen button').innerText = "一時停止";
+            document.querySelectorAll('.steam').forEach(s => {
+                s.classList.remove('animate');
+                s.classList.add('hidden');
+            });
+        }
+
+        function finishBaking() {
+            clearInterval(countdown);
+            playBeep(); 
+            achievements.count += 1;
+            achievements.time += currentCake.time;
+            localStorage.setItem('bakeryAchievements', JSON.stringify(achievements));
+            updateAchievementUI();
+            const modal = document.getElementById('completion-modal');
+            document.getElementById('done-name').innerText = currentCake.name;
+            document.getElementById('done-img').src = currentCake.imgUrl;
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            playBeep();
+            document.getElementById('completion-modal').style.display = 'none';
+            resetGame(); 
+        }
+
+
+        // 关键修复函数
+        function closeWelcomeModal() {
+            playBeep();
+            
+            // 1. 清除定时器，防止反复出现
+            if (welcomeTimeout !== null) {
+                clearTimeout(welcomeTimeout);
+                welcomeTimeout = null; 
+            }
+            
+            const welcomeModal = document.getElementById('welcome-modal');
+            
+            // 2. 启动淡出动画
+            welcomeModal.style.opacity = '0';
+            welcomeModal.style.transition = 'opacity 0.3s ease';
+            
+            // 3. 延迟后彻底隐藏弹窗并启动游戏 (最关键的一步)
+            setTimeout(() => {
+                // 确保 display 被设置为 none
+                welcomeModal.style.display = 'none'; 
+                // 恢复 opacity 以备下次使用
+                welcomeModal.style.opacity = '1'; 
+                // 启动主应用逻辑（生成菜单）
+                init();
+            }, 300); // 等待淡出动画完成
+        }
+        
+        // 应用程序启动入口 (只设置一次定时器)
+        function startApplication() {
+            // 设置自动关闭的定时器
+            welcomeTimeout = setTimeout(closeWelcomeModal, 4000); 
+        }
+
+        function updateAchievementUI() {
+            document.getElementById('total-cakes').innerText = achievements.count;
+            document.getElementById('total-time').innerText = achievements.time;
+        }
+
+        // 启动应用
+        startApplication();
+
+    </script>
+</body>
+</html>
